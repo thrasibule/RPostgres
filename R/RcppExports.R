@@ -49,6 +49,10 @@ result_bind_params <- function(rs, params) {
     invisible(.Call('RPostgres_result_bind_params', PACKAGE = 'RPostgres', rs, params))
 }
 
+result_bind_params_rows <- function(rs, params) {
+    invisible(.Call('RPostgres_result_bind_params_rows', PACKAGE = 'RPostgres', rs, params))
+}
+
 result_is_complete <- function(rs) {
     .Call('RPostgres_result_is_complete', PACKAGE = 'RPostgres', rs)
 }

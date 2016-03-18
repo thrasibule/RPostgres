@@ -144,6 +144,17 @@ BEGIN_RCPP
     return R_NilValue;
 END_RCPP
 }
+// result_bind_params_rows
+void result_bind_params_rows(XPtr<PqResult> rs, ListOf<CharacterVector> params);
+RcppExport SEXP RPostgres_result_bind_params_rows(SEXP rsSEXP, SEXP paramsSEXP) {
+BEGIN_RCPP
+    Rcpp::RNGScope __rngScope;
+    Rcpp::traits::input_parameter< XPtr<PqResult> >::type rs(rsSEXP);
+    Rcpp::traits::input_parameter< ListOf<CharacterVector> >::type params(paramsSEXP);
+    result_bind_params_rows(rs, params);
+    return R_NilValue;
+END_RCPP
+}
 // result_is_complete
 bool result_is_complete(XPtr<PqResult> rs);
 RcppExport SEXP RPostgres_result_is_complete(SEXP rsSEXP) {

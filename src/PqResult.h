@@ -134,8 +134,12 @@ public:
 
       PGresult* res = PQexecPrepared(pConn_->conn(), "", nparams_,
         &c_params[0], NULL, &c_formats[0], 0);
-      if (PQresultStatus(res) != PGRES_COMMAND_OK)
-        Rcpp::stop("%s (row %i)", PQerrorMessage(pConn_->conn()), i + 1);
+      if (PQresultStatus(res) != PGRES_COMMAND_OK) {
+        std::string error(PQresultErrorMessage(res));
+        PQclear(res);
+        Rcpp::stop("%s (row %i)", error, i + 1);
+      }
+      PQclear(res);
     }
   }
 
