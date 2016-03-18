@@ -89,17 +89,13 @@ public:
         nparams_, params.size());
     }
 
-    std::vector<const char*> c_params(nparams_);
-    std::vector<int> c_formats(nparams_);
+    std::vector<const char*> c_params(nparams_, NULL);
+    std::vector<int> c_formats(nparams_, 0);
     std::vector<std::string> s_params(nparams_);
     for (int i = 0; i < nparams_; ++i) {
-      if (Rcpp::CharacterVector::is_na(params[i][0])) {
-        c_params[i] = NULL;
-        c_formats[i] = 0;
-      } else {
+      if (!Rcpp::CharacterVector::is_na(params[i][0])) {
         s_params[i] = Rcpp::as<std::string>(params[i][0]);
         c_params[i] = s_params[i].c_str();
-        c_formats[i] = 0;
       }
     }
 
@@ -120,21 +116,19 @@ public:
     }
 
     int n = params[0].size();
-
-    std::vector<const char*> c_params(nparams_);
+    std::vector<const char*> c_params(nparams_, NULL);
     std::vector<std::string> s_params(nparams_);
-    std::vector<int> c_formats(nparams_);
-    for (int j = 0; j < nparams_; ++j) {
-      c_formats[j] = 0;
-    }
+    std::vector<int> c_formats(nparams_, 0);
 
     for (int i = 0; i < n; ++i) {
       if (i % 1000 == 0)
         Rcpp::checkUserInterrupt();
 
       for (int j = 0; j < nparams_; ++j) {
-        s_params[j] = Rcpp::as<std::string>(params[j][i]);
-        c_params[j] = s_params[j].c_str();
+        if (!Rcpp::CharacterVector::is_na(params[j][i])) {
+          s_params[j] = Rcpp::as<std::string>(params[j][i]);
+          c_params[j] = s_params[j].c_str();
+        }
       }
 
       PGresult* res = PQexecPrepared(pConn_->conn(), "", nparams_,
