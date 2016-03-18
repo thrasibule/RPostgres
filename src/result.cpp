@@ -19,6 +19,11 @@ void result_bind_params(XPtr<PqResult> rs, ListOf<CharacterVector> params) {
 }
 
 // [[Rcpp::export]]
+void result_bind_params_rows(XPtr<PqResult> rs, ListOf<CharacterVector> params) {
+  return rs->bindRows(params);
+}
+
+// [[Rcpp::export]]
 bool result_is_complete(XPtr<PqResult> rs) {
   return rs->isComplete();
 }

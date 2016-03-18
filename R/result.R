@@ -89,7 +89,6 @@ setMethod("dbSendQuery", c("PqConnection", "character"), function(conn, statemen
   if (!is.null(params)) {
     dbBind(rs, params)
   }
-
   rs
 })
 
@@ -112,7 +111,11 @@ setMethod("dbFetch", "PqResult", function(res, n = -1, ..., row.names = NA) {
 #' @export
 setMethod("dbBind", "PqResult", function(res, params, ...) {
   params <- lapply(params, as.character)
-  result_bind_params(res@ptr, params)
+  if (length(params[[1]]) > 1) {
+      result_bind_params_rows(res@ptr, params)
+  } else {
+      result_bind_params(res@ptr, params)
+  }
   invisible(res)
 })
 
