@@ -15,6 +15,17 @@ std::string encode_data_frame(Rcpp::List x);
 
 // Generic data frame utils ----------------------------------------------------
 
+enum class PGTypes {
+  Int = INTSXP,
+  Real = REALSXP,
+  String = STRSXP,
+  Logical = LGLSXP,
+  Vector = VECSXP,
+  Date,
+  Datetime,
+  Time
+};
+
 Rcpp::List inline dfResize(Rcpp::List df, int n) {
   int p = df.size();
 
@@ -30,7 +41,7 @@ Rcpp::List inline dfResize(Rcpp::List df, int n) {
   return out;
 }
 
-Rcpp::List inline dfCreate(std::vector<SEXPTYPE> types, std::vector<std::string> names, int n) {
+Rcpp::List inline dfCreate(const std::vector<PGTypes>& types, const std::vector<std::string>& names, int n) {
   int p = types.size();
 
   Rcpp::List out(p);
@@ -38,8 +49,21 @@ Rcpp::List inline dfCreate(std::vector<SEXPTYPE> types, std::vector<std::string>
   out.attr("class") = "data.frame";
   out.attr("row.names") = Rcpp::IntegerVector::create(NA_INTEGER, -n);
 
-  for (int j = 0; j < p; ++j) {
-    out[j] = Rf_allocVector(types[j], n);
+  int j = 0;
+  for (auto it = types.begin(); it != types.end(); ++it, j++) {
+      switch (*it) {
+      case PGTypes::Date:
+          out[j] = Rf_allocVector(INTSXP, n);
+          break;
+      case PGTypes::Datetime:
+          out[j] = Rf_allocVector(REALSXP, n);
+          break;
+      case PGTypes::Time:
+          out[j] = Rf_allocVector(REALSXP, n);
+          break;
+      default:
+          out[j] = Rf_allocVector(static_cast<SEXPTYPE>(*it), n);
+      }
   }
   return out;
 }
