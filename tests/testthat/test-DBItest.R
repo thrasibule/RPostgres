@@ -30,7 +30,6 @@ DBItest::test_all(c(
   "data_timestamp_typed",                       # #53
   "data_timestamp_current_typed",               # #53
   "data_timestamp_utc_typed",                   # #53
-  "data_timestamp_null_.*",                     # #53
 
   # sql
   "quote_string.*",                             # #50

@@ -20,7 +20,7 @@ class PqResult : boost::noncopyable {
   PqConnectionPtr pConn_;
   PGresult* pSpec_;
   PqRowPtr pNextRow_;
-  std::vector<SEXPTYPE> types_;
+  std::vector<PGTypes> types_;
   std::vector<std::string> names_;
   int ncols_, nrows_, nparams_;
   bool bound_;
@@ -68,9 +68,10 @@ public:
 
   ~PqResult() {
     try {
-      if (active())
-        PQclear(pSpec_);
-        pConn_->setCurrentResult(NULL);
+        if (active()) {
+            PQclear(pSpec_);
+            pConn_->setCurrentResult(NULL);
+        }
     } catch (...) {}
   }
 
@@ -182,7 +183,7 @@ public:
       }
 
       for (int j = 0; j < ncols_; ++j) {
-        pNextRow_->setListValue(out[j], i, j);
+        pNextRow_->setListValue(out[j], i, j, types_);
       }
       fetchRow();
       ++i;
@@ -195,7 +196,23 @@ public:
     if (i < n) {
       out = dfResize(out, i);
     }
-
+    for(int i = 0; i < out.size(); i++){
+      Rcpp::RObject col = out[i];
+      switch (types_[i]) {
+      case PGTypes::Date:
+        col.attr("class") = Rcpp::CharacterVector::create("Date");
+        break;
+      case PGTypes::Datetime:
+        col.attr("class") = Rcpp::CharacterVector::create("POSIXct", "POSIXt");
+        break;
+      case PGTypes::Time:
+        col.attr("class") = Rcpp::CharacterVector::create("hms", "difftime");
+        col.attr("units") = Rcpp::CharacterVector::create("secs");
+        break;
+      default:
+        break;
+      }
+    }
     return out;
   }
 
@@ -222,11 +239,13 @@ public:
     Rcpp::CharacterVector types(ncols_);
     for (int i = 0; i < ncols_; i++) {
       switch(types_[i]) {
-      case STRSXP:  types[i] = "character"; break;
-      case INTSXP:  types[i] = "integer"; break;
-      case REALSXP: types[i] = "double"; break;
-      case VECSXP:  types[i] = "list"; break;
-      case LGLSXP:  types[i] = "logical"; break;
+      case PGTypes::String: types[i] = "character"; break;
+      case PGTypes::Int:  types[i] = "integer"; break;
+      case PGTypes::Real: types[i] = "double"; break;
+      case PGTypes::Vector:  types[i] = "list"; break;
+      case PGTypes::Logical:  types[i] = "logical"; break;
+      case PGTypes::Date: types[i] = "Date"; break;
+      case PGTypes::Datetime: types[i] = "POSIXct"; break;
       default: Rcpp::stop("Unknown variable type");
       }
     }
@@ -251,8 +270,8 @@ private:
     return names;
   }
 
-  std::vector<SEXPTYPE> columnTypes() const {
-    std::vector<SEXPTYPE> types;
+  std::vector<PGTypes> columnTypes() const {
+    std::vector<PGTypes> types;
     types.reserve(ncols_);
 
     for (int i = 0; i < ncols_; ++i) {
@@ -263,14 +282,14 @@ private:
       case 21: // SMALLINT
       case 23: // INTEGER
       case 26: // OID
-        types.push_back(INTSXP);
+        types.push_back(PGTypes::Int);
         break;
 
       case 1700: // DECIMAL
       case 701: // FLOAT8
       case 700: // FLOAT
       case 790: // MONEY
-        types.push_back(REALSXP);
+        types.push_back(PGTypes::Real);
         break;
 
       case 18: // CHAR
@@ -279,28 +298,36 @@ private:
       case 114: // JSON
       case 1042: // CHAR
       case 1043: // VARCHAR
+        types.push_back(PGTypes::String);
+        break;
       case 1082: // DATE
+        types.push_back(PGTypes::Date);
+        break;
       case 1083: // TIME
+      case 1266: // TIMETZOID
+        types.push_back(PGTypes::Time);
+        break;
       case 1114: // TIMESTAMP
       case 1184: // TIMESTAMPTZOID
+        types.push_back(PGTypes::Datetime);
+        break;
       case 1186: // INTERVAL
-      case 1266: // TIMETZOID
       case 3802: // JSONB
       case 2950: // UUID
-        types.push_back(STRSXP);
+        types.push_back(PGTypes::String);
         break;
 
       case 16: // BOOL
-        types.push_back(LGLSXP);
+        types.push_back(PGTypes::Logical);
         break;
 
       case 17: // BYTEA
       case 2278: // NULL
-        types.push_back(VECSXP);
+        types.push_back(PGTypes::Vector);
         break;
 
       default:
-        types.push_back(STRSXP);
+        types.push_back(PGTypes::String);
         Rcpp::warning("Unknown field type (%s) in column %s", type, PQfname(pSpec_, i));
       }
     }
