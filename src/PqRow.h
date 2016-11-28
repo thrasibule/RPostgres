@@ -70,7 +70,7 @@ public:
   }
 
   // Value accessors -----------------------------------------------------------
-  bool valueNull(int j) {
+  bool inline valueNull(int j) {
     return PQgetisnull(pRes_, 0, j);
   }
 
@@ -100,28 +100,87 @@ public:
     return bytes;
   }
 
+  int valueDate(int j) {
+    if (valueNull(j)) {
+      return NA_INTEGER;
+    }
+    char* val = PQgetvalue(pRes_, 0, j);
+    struct tm date = { 0 };
+    date.tm_sec = date.tm_min = date.tm_hour = date.tm_isdst = 0;
+    date.tm_year = (*val - 0x30)*1000 + (*(++val)-0x30)*100 +
+      (*(++val)-0x30)*10 + (*(++val)-0x30) - 1900;
+    val++;
+    date.tm_mon = (*(++val)-0x30)*10 + (*(++val)-0x30) -1;
+    val++;
+    date.tm_mday = (*(++val)-0x30)*10 + (*(++val)-0x30);
+    return mktime(&date)/(24*60*60);
+  }
+
+  double valueDatetime(int j) {
+    if (valueNull(j)) {
+      return NA_REAL;
+    }
+    char* val = PQgetvalue(pRes_, 0, j);
+    struct tm date;
+    date.tm_isdst = 0;
+    date.tm_year = (*val - 0x30)*1000 + (*(++val)-0x30)*100 +
+      (*(++val)-0x30)*10 + (*(++val)-0x30) - 1900;
+    val++;
+    date.tm_mon = (*(++val)-0x30)*10 + (*(++val)-0x30)-1;
+    val++;
+    date.tm_mday = (*(++val)-0x30)*10 + (*(++val)-0x30);
+    val++;
+    date.tm_hour = (*(++val)-0x30)*10 + (*(++val)-0x30);
+    val++;
+    date.tm_min = (*(++val)-0x30)*10 + (*(++val)-0x30);
+    val++;
+    date.tm_sec = (*(++val)-0x30)*10 + (*(++val)-0x30);
+    return mktime(&date);
+  }
+
+  double valueTime(int j) {
+    if (valueNull(j)) {
+      return NA_REAL;
+    }
+    char* val = PQgetvalue(pRes_, 0, j);
+    int hour = (*val-0x30)*10 + (*(++val)-0x30);
+    val++;
+    int min = (*(++val)-0x30)*10 + (*(++val)-0x30);
+    val++;
+    int sec = (*(++val)-0x30)*10 + (*(++val)-0x30);
+    return static_cast<double>(hour * 3600 + min * 60 + sec);
+  }
+
   int valueLogical(int j) {
     return valueNull(j) ? NA_LOGICAL :
       (strcmp(PQgetvalue(pRes_, 0, j), "t") == 0);
   }
 
-  void setListValue(SEXP x, int i, int j) {
-    switch(TYPEOF(x)) {
-    case LGLSXP:
+  void setListValue(SEXP x, int i, int j, const std::vector<PGTypes>& types) {
+    switch(types[j]) {
+    case PGTypes::Logical:
       LOGICAL(x)[i] = valueLogical(j);
       break;
-    case INTSXP:
+    case PGTypes::Int:
       INTEGER(x)[i] = valueInt(j);
       break;
-    case REALSXP:
+    case PGTypes::Real:
       REAL(x)[i] = valueDouble(j);
       break;
-    case STRSXP:
+    case PGTypes::String:
       SET_STRING_ELT(x, i, valueString(j));
       break;
-    case VECSXP:
+    case PGTypes::Vector:
       SET_VECTOR_ELT(x, i, valueRaw(j));
       break;
+    case PGTypes::Date:
+      INTEGER(x)[i] = valueDate(j);
+      break;
+    case PGTypes::Datetime:
+      REAL(x)[i] = valueDatetime(j);
+      break;
+    case PGTypes::Time:
+      REAL(x)[i] = valueTime(j);
     }
   }
 
