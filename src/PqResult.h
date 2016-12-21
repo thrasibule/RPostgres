@@ -4,12 +4,9 @@
 #include <Rcpp.h>
 #include <libpq-fe.h>
 #include <boost/noncopyable.hpp>
-#include <boost/scoped_ptr.hpp>
 #include "PqConnection.h"
 #include "PqRow.h"
 #include "PqUtils.h"
-
-typedef boost::shared_ptr<PqRow> PqRowPtr;
 
 // PqResult --------------------------------------------------------------------
 // There is no object analogous to PqResult in libpq: this provides a result set
@@ -17,9 +14,9 @@ typedef boost::shared_ptr<PqRow> PqRowPtr;
 // most recent) for each connection.
 
 class PqResult : boost::noncopyable {
-  PqConnectionPtr pConn_;
-  PGresult* pSpec_;
-  PqRowPtr pNextRow_;
+  PqConnection* pConn_ = NULL;
+  PGresult* pSpec_ = NULL;
+  PqRow* pNextRow_ = NULL;
   std::vector<PGTypes> types_;
   std::vector<std::string> names_;
   int ncols_, nrows_, nparams_;
@@ -28,7 +25,7 @@ class PqResult : boost::noncopyable {
 
 public:
 
-  PqResult(PqConnectionPtr pConn, std::string sql):
+  PqResult(PqConnection* pConn, std::string sql):
            pConn_(pConn), nrows_(0), bound_(false), local_tz_(cctz::local_time_zone()) {
     pConn_->conCheck();
     pConn->setCurrentResult(this);
@@ -151,12 +148,15 @@ public:
   }
 
   void fetchRow() {
-    pNextRow_.reset(new PqRow(pConn_->conn()));
+    if(pNextRow_ != NULL) {
+      delete pNextRow_;
+    }
+    pNextRow_ = new PqRow(pConn_->conn());
     nrows_++;
   }
 
   void fetchRowIfNeeded() {
-    if (pNextRow_.get() != NULL)
+    if (pNextRow_ != NULL)
       return;
 
     fetchRow();
@@ -224,7 +224,7 @@ public:
   }
 
   int rowsFetched() {
-    return nrows_ - (pNextRow_.get() != NULL);
+    return nrows_ - (pNextRow_ != NULL);
   }
 
   bool isComplete() {
