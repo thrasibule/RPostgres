@@ -4,6 +4,9 @@
 #include <Rcpp.h>
 #include <libpq-fe.h>
 #include <boost/noncopyable.hpp>
+#include <cctz/civil_time.h>
+#include <cctz/time_zone.h>
+#include <chrono>
 
 // PqRow -----------------------------------------------------------------------
 // A single row of results from PostgreSQL
@@ -105,15 +108,15 @@ public:
       return NA_INTEGER;
     }
     char* val = PQgetvalue(pRes_, 0, j);
-    struct tm date = { 0 };
-    date.tm_isdst = -1;
-    date.tm_year = (*val - 0x30)*1000 + (*(++val)-0x30)*100 +
-      (*(++val)-0x30)*10 + (*(++val)-0x30) - 1900;
+    int y = (*val - 0x30)*1000 + (*(++val)-0x30)*100 +
+        (*(++val)-0x30)*10 + (*(++val)-0x30);
     val++;
-    date.tm_mon = (*(++val)-0x30)*10 + (*(++val)-0x30) -1;
+    int m = (*(++val)-0x30)*10 + (*(++val)-0x30);
     val++;
-    date.tm_mday = (*(++val)-0x30)*10 + (*(++val)-0x30);
-    return timegm(&date)/(24*60*60);
+    int d = (*(++val)-0x30)*10 + (*(++val)-0x30);
+    cctz::time_zone utc;
+    auto date = cctz::convert(cctz::civil_day(y, m, d), utc);
+    return date.time_since_epoch().count() / 86400;
   }
 
   double valueDatetime(int j) {
@@ -121,23 +124,23 @@ public:
       return NA_REAL;
     }
     char* val = PQgetvalue(pRes_, 0, j);
-    char* end;
-    struct tm date;
-    date.tm_isdst = -1;
-    date.tm_year = (*val - 0x30)*1000 + (*(++val)-0x30)*100 +
-      (*(++val)-0x30)*10 + (*(++val)-0x30) - 1900;
+    int y = (*val - 0x30)*1000 + (*(++val)-0x30)*100 +
+        (*(++val)-0x30)*10 + (*(++val)-0x30);
     val++;
-    date.tm_mon = (*(++val)-0x30)*10 + (*(++val)-0x30)-1;
+    int m = (*(++val)-0x30)*10 + (*(++val)-0x30);
     val++;
-    date.tm_mday = (*(++val)-0x30)*10 + (*(++val)-0x30);
+    int d = (*(++val)-0x30)*10 + (*(++val)-0x30);
     val++;
-    date.tm_hour = (*(++val)-0x30)*10 + (*(++val)-0x30);
+    int H = (*(++val)-0x30)*10 + (*(++val)-0x30);
     val++;
-    date.tm_min = (*(++val)-0x30)*10 + (*(++val)-0x30);
+    int M = (*(++val)-0x30)*10 + (*(++val)-0x30);
     val++;
-    double sec = strtod(++val, &end);
-    date.tm_sec = sec;
-    return timegm(&date) + (sec - date.tm_sec);
+    double frac_sec = strtod(++val, NULL);
+    int s = static_cast<int>(frac_sec);
+    cctz::time_zone utc;
+    auto date = cctz::convert(cctz::civil_second(y, m, d, H, M, s),
+                           utc);
+    return date.time_since_epoch().count() + frac_sec - s;
   }
 
   double valueTime(int j) {
