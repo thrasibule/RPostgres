@@ -3,9 +3,8 @@
 using namespace Rcpp;
 
 // [[Rcpp::export]]
-XPtr<PqResult> result_create(XPtr<PqConnectionPtr> con, std::string sql) {
-  PqResult* res = new PqResult(*con, sql);
-  return XPtr<PqResult>(res, true);
+XPtr<PqResult> result_create(XPtr<PqConnection> con, std::string sql) {
+  return XPtr<PqResult>(new PqResult(con.checked_get(), sql), true);
 }
 
 // [[Rcpp::export]]

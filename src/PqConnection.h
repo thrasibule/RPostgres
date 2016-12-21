@@ -4,19 +4,16 @@
 #include <Rcpp.h>
 #include <libpq-fe.h>
 #include <boost/noncopyable.hpp>
-#include <boost/shared_ptr.hpp>
 #include "PqUtils.h"
 
 class PqResult;
 
-// convenience typedef for shared_ptr to PqConnection
 class PqConnection;
-typedef boost::shared_ptr<PqConnection> PqConnectionPtr;
 
 // PqConnection ----------------------------------------------------------------
 
 class PqConnection : boost::noncopyable {
-  PGconn* pConn_;
+  PGconn* pConn_ = NULL;
   PqResult* pCurrentResult_;
 
 public:
