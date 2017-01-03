@@ -24,11 +24,12 @@ class PqResult : boost::noncopyable {
   std::vector<std::string> names_;
   int ncols_, nrows_, nparams_;
   bool bound_;
+  cctz::time_zone local_tz_;
 
 public:
 
   PqResult(PqConnectionPtr pConn, std::string sql):
-           pConn_(pConn), nrows_(0), bound_(false) {
+           pConn_(pConn), nrows_(0), bound_(false), local_tz_(cctz::local_time_zone()) {
     pConn_->conCheck();
     pConn->setCurrentResult(this);
 
@@ -183,7 +184,7 @@ public:
       }
 
       for (int j = 0; j < ncols_; ++j) {
-        pNextRow_->setListValue(out[j], i, j, types_);
+        pNextRow_->setListValue(out[j], i, j, types_, local_tz_);
       }
       fetchRow();
       ++i;
@@ -203,6 +204,7 @@ public:
         col.attr("class") = Rcpp::CharacterVector::create("Date");
         break;
       case PGTypes::Datetime:
+      case PGTypes::DatetimeTZ:
         col.attr("class") = Rcpp::CharacterVector::create("POSIXct", "POSIXt");
         break;
       case PGTypes::Time:
@@ -246,6 +248,7 @@ public:
       case PGTypes::Logical:  types[i] = "logical"; break;
       case PGTypes::Date: types[i] = "Date"; break;
       case PGTypes::Datetime: types[i] = "POSIXct"; break;
+      case PGTypes::DatetimeTZ: types[i] = "POSIXct"; break;
       default: Rcpp::stop("Unknown variable type");
       }
     }
@@ -308,8 +311,10 @@ private:
         types.push_back(PGTypes::Time);
         break;
       case 1114: // TIMESTAMP
-      case 1184: // TIMESTAMPTZOID
         types.push_back(PGTypes::Datetime);
+        break;
+      case 1184: // TIMESTAMPTZOID
+        types.push_back(PGTypes::DatetimeTZ);
         break;
       case 1186: // INTERVAL
       case 3802: // JSONB

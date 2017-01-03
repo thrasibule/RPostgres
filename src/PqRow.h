@@ -119,7 +119,7 @@ public:
     return date.time_since_epoch().count() / 86400;
   }
 
-  double valueDatetime(int j) {
+  double valueDatetime(int j, const cctz::time_zone& local_tz = cctz::time_zone()) {
     if (valueNull(j)) {
       return NA_REAL;
     }
@@ -137,9 +137,8 @@ public:
     val++;
     double frac_sec = strtod(++val, NULL);
     int s = static_cast<int>(frac_sec);
-    cctz::time_zone utc;
     auto date = cctz::convert(cctz::civil_second(y, m, d, H, M, s),
-                           utc);
+                              local_tz);
     return date.time_since_epoch().count() + frac_sec - s;
   }
 
@@ -161,7 +160,8 @@ public:
       (strcmp(PQgetvalue(pRes_, 0, j), "t") == 0);
   }
 
-  void setListValue(SEXP x, int i, int j, const std::vector<PGTypes>& types) {
+  void setListValue(SEXP x, int i, int j, const std::vector<PGTypes>& types,
+                    const cctz::time_zone& local_tz) {
     switch(types[j]) {
     case PGTypes::Logical:
       LOGICAL(x)[i] = valueLogical(j);
@@ -181,8 +181,11 @@ public:
     case PGTypes::Date:
       INTEGER(x)[i] = valueDate(j);
       break;
-    case PGTypes::Datetime:
+    case PGTypes::DatetimeTZ:
       REAL(x)[i] = valueDatetime(j);
+      break;
+    case PGTypes::Datetime:
+        REAL(x)[i] = valueDatetime(j, local_tz);
       break;
     case PGTypes::Time:
       REAL(x)[i] = valueTime(j);

@@ -23,6 +23,7 @@ enum class PGTypes {
   Vector = VECSXP,
   Date,
   Datetime,
+  DatetimeTZ,
   Time
 };
 
@@ -56,8 +57,7 @@ Rcpp::List inline dfCreate(const std::vector<PGTypes>& types, const std::vector<
           out[j] = Rf_allocVector(INTSXP, n);
           break;
       case PGTypes::Datetime:
-          out[j] = Rf_allocVector(REALSXP, n);
-          break;
+      case PGTypes::DatetimeTZ:
       case PGTypes::Time:
           out[j] = Rf_allocVector(REALSXP, n);
           break;
