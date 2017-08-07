@@ -108,12 +108,16 @@ public:
       return NA_INTEGER;
     }
     char* val = PQgetvalue(pRes_, 0, j);
-    int y = (*val - 0x30)*1000 + (*(++val)-0x30)*100 +
-        (*(++val)-0x30)*10 + (*(++val)-0x30);
+    int y = (*val - 0x30)*1000;
+    y += (*(++val)-0x30)*100;
+    y += (*(++val)-0x30)*10;
+    y += (*(++val)-0x30);
     val++;
-    int m = (*(++val)-0x30)*10 + (*(++val)-0x30);
+    int m = (*(++val)-0x30)*10;
+    m += (*(++val)-0x30);
     val++;
-    int d = (*(++val)-0x30)*10 + (*(++val)-0x30);
+    int d = (*(++val)-0x30)*10;
+    d += (*(++val)-0x30);
     cctz::time_zone utc;
     auto date = cctz::convert(cctz::civil_day(y, m, d), utc);
     return date.time_since_epoch().count() / 86400;
@@ -124,16 +128,22 @@ public:
       return NA_REAL;
     }
     char* val = PQgetvalue(pRes_, 0, j);
-    int y = (*val - 0x30)*1000 + (*(++val)-0x30)*100 +
-        (*(++val)-0x30)*10 + (*(++val)-0x30);
+    int y = (*val - 0x30)*1000;
+    y += (*(++val)-0x30)*100;
+    y += (*(++val)-0x30)*10;
+    y += (*(++val)-0x30);
     val++;
-    int m = (*(++val)-0x30)*10 + (*(++val)-0x30);
+    int m = (*(++val)-0x30)*10;
+    m += (*(++val)-0x30);
     val++;
-    int d = (*(++val)-0x30)*10 + (*(++val)-0x30);
+    int d = (*(++val)-0x30)*10;
+    d += (*(++val)-0x30);
     val++;
-    int H = (*(++val)-0x30)*10 + (*(++val)-0x30);
+    int H = (*(++val)-0x30)*10;
+    H += (*(++val)-0x30);
     val++;
-    int M = (*(++val)-0x30)*10 + (*(++val)-0x30);
+    int M = (*(++val)-0x30)*10;
+    M += (*(++val)-0x30);
     val++;
     double frac_sec = strtod(++val, NULL);
     int s = static_cast<int>(frac_sec);
