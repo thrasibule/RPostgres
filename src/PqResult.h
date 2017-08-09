@@ -68,9 +68,10 @@ public:
 
   ~PqResult() {
     try {
-      if (active())
+      if (active()) {
         PQclear(pSpec_);
         pConn_->setCurrentResult(NULL);
+      }
     } catch (...) {}
   }
 
